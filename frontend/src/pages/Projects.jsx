@@ -1,50 +1,50 @@
-import { useEffect, useMemo, useState } from 'react'
-import ProjectCard from '../components/ProjectCard'
-import ProjectDetails from '../components/ProjectDetails'
-import AddProject from './AddProject'
-import { calculateRisk } from '../utils/risk'
-import { apiRequest, getCachedApiResponse } from '../services/api'
-import { exportProjectsToCsv } from '../utils/exportCsv'
+import { useEffect, useMemo, useState } from "react";
+import ProjectCard from "../components/ProjectCard";
+import ProjectDetails from "../components/ProjectDetails";
+import AddProject from "./AddProject";
+import { calculateRisk } from "../utils/risk";
+import { apiRequest, getCachedApiResponse } from "../services/api";
+import { exportProjectsToCsv } from "../utils/exportCsv";
 
-const PAGE_SIZE = 12
+const PAGE_SIZE = 12;
 
 // Parses a dd-mm-yyyy string into a zero-padded ISO "yyyy-mm-dd" string so it
 // can be compared directly against project.endDate (already stored as ISO).
 // Returns null if the input is empty, malformed, or not a real calendar date.
 function parseDdMmYyyyToIso(value) {
-  const match = /^(\d{2})-(\d{2})-(\d{4})$/.exec(value.trim())
-  if (!match) return null
+  const match = /^(\d{2})-(\d{2})-(\d{4})$/.exec(value.trim());
+  if (!match) return null;
 
-  const day = Number(match[1])
-  const month = Number(match[2])
-  const year = Number(match[3])
-  const iso = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+  const iso = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
   // Guard against inputs like 31-02-2026 that regex-match but aren't real dates.
-  const parsed = new Date(iso)
+  const parsed = new Date(iso);
   const isRealDate =
     parsed.getUTCFullYear() === year &&
     parsed.getUTCMonth() === month - 1 &&
-    parsed.getUTCDate() === day
+    parsed.getUTCDate() === day;
 
-  return isRealDate ? iso : null
+  return isRealDate ? iso : null;
 }
 function getTodayIso() {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, "0")
-  const day = String(now.getDate()).padStart(2, "0")
-  return `${year}-${month}-${day}`
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 function Projects() {
-  const cachedProjects = getCachedApiResponse('/projects')
-  const [projects, setProjects] = useState(() => cachedProjects || [])
-  const [selectedProject, setSelectedProject] = useState(null)
-  const [loading, setLoading] = useState(() => !cachedProjects)
-  const [detailsLoading, setDetailsLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [editingProject, setEditingProject] = useState(null)
-  const [currentPage, setCurrentPage] = useState(1)
+  const cachedProjects = getCachedApiResponse("/projects");
+  const [projects, setProjects] = useState(() => cachedProjects || []);
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [loading, setLoading] = useState(() => !cachedProjects);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [editingProject, setEditingProject] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [editForm, setEditForm] = useState({
     name: "",
     department: "",
@@ -55,45 +55,45 @@ function Projects() {
     status: "On Track",
     startDate: "",
     endDate: "",
-  })
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("All")
-  const [riskFilter, setRiskFilter] = useState("All")
-  const [endDateFilter, setEndDateFilter] = useState("")
-  const [showAddProject, setShowAddProject] = useState(false)
+  });
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [riskFilter, setRiskFilter] = useState("All");
+  const [endDateFilter, setEndDateFilter] = useState("");
+  const [showAddProject, setShowAddProject] = useState(false);
 
-  const role = localStorage.getItem('role') || 'officer'
+  const role = localStorage.getItem("role") || "officer";
 
   useEffect(() => {
     apiRequest("/projects")
       .then((data) => setProjects(data))
       .catch((error) => {
-        console.error(error)
-        setError(error.message)
+        console.error(error);
+        setError(error.message);
       })
-      .finally(() => setLoading(false))
-  }, [])
+      .finally(() => setLoading(false));
+  }, []);
 
   useEffect(() => {
-    setCurrentPage(1)
-  }, [searchTerm, statusFilter, riskFilter, endDateFilter])
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, riskFilter, endDateFilter]);
 
   function handleProjectClick(projectId) {
-    setDetailsLoading(true)
-    setError("")
+    setDetailsLoading(true);
+    setError("");
 
     apiRequest(`/projects/${projectId}`)
       .then((data) => setSelectedProject(data))
       .catch((error) => {
-        console.error(error)
-        setError(error.message)
+        console.error(error);
+        setError(error.message);
       })
-      .finally(() => setDetailsLoading(false))
+      .finally(() => setDetailsLoading(false));
   }
 
   function handleEditClick(project, event) {
-    event.stopPropagation()
-    setEditingProject(project)
+    event.stopPropagation();
+    setEditingProject(project);
     setEditForm({
       name: project.name,
       department: project.department,
@@ -104,17 +104,17 @@ function Projects() {
       status: project.status,
       startDate: project.startDate,
       endDate: project.endDate,
-    })
+    });
   }
 
   function handleEditInputChange(event) {
-    const { name, value } = event.target
-    setEditForm((current) => ({ ...current, [name]: value }))
+    const { name, value } = event.target;
+    setEditForm((current) => ({ ...current, [name]: value }));
   }
 
   async function handleUpdateProject(event) {
-    event.preventDefault()
-    setError("")
+    event.preventDefault();
+    setError("");
 
     try {
       const updatedProject = await apiRequest(
@@ -133,77 +133,84 @@ function Projects() {
             start_date: editForm.startDate,
             end_date: editForm.endDate,
           }),
-        }
-      )
+        },
+      );
 
       setProjects((current) =>
         current.map((project) =>
-          project.id === updatedProject.id ? updatedProject : project
-        )
-      )
-      setEditingProject(null)
+          project.id === updatedProject.id ? updatedProject : project,
+        ),
+      );
+      setEditingProject(null);
     } catch (error) {
-      console.error(error)
-      setError(error.message)
+      console.error(error);
+      setError(error.message);
     }
   }
 
   async function handleDeleteProject(projectId, event) {
-    event.stopPropagation()
-    const confirmed = window.confirm("Are you sure you want to delete this project?")
-    if (!confirmed) return
+    event.stopPropagation();
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this project?",
+    );
+    if (!confirmed) return;
 
-    setError("")
+    setError("");
 
     try {
-      await apiRequest(`/projects/${projectId}`, { method: "DELETE" })
-      setProjects((current) => current.filter((project) => project.id !== projectId))
+      await apiRequest(`/projects/${projectId}`, { method: "DELETE" });
+      setProjects((current) =>
+        current.filter((project) => project.id !== projectId),
+      );
     } catch (error) {
-      console.error(error)
-      setError(error.message)
+      console.error(error);
+      setError(error.message);
     }
   }
 
   const endDateFilterIso = useMemo(
     () => parseDdMmYyyyToIso(endDateFilter),
-    [endDateFilter]
-  )
-  const endDateFilterInvalid = endDateFilter.trim() !== "" && !endDateFilterIso
+    [endDateFilter],
+  );
+  const endDateFilterInvalid = endDateFilter.trim() !== "" && !endDateFilterIso;
 
   const filteredProjects = useMemo(() => {
-    const search = searchTerm.toLowerCase().trim()
+    const search = searchTerm.toLowerCase().trim();
 
     return projects.filter((project) => {
       const matchesSearch =
         !search ||
         project.name.toLowerCase().includes(search) ||
-        project.department.toLowerCase().includes(search)
+        project.department.toLowerCase().includes(search);
 
       const matchesStatus =
-        statusFilter === "All" || project.status === statusFilter
+        statusFilter === "All" || project.status === statusFilter;
 
       const matchesRisk =
-        riskFilter === "All" || calculateRisk(project) === riskFilter
+        riskFilter === "All" || calculateRisk(project) === riskFilter;
 
+      // Show projects whose end date is on or before the chosen date.
+      // Invalid/incomplete input is ignored so it doesn't hide everything.
       const matchesEndDate =
         !endDateFilterIso ||
-        (Boolean(project.endDate) &&
-          project.endDate >= getTodayIso() &&
-          project.endDate <= endDateFilterIso)
+        (Boolean(project.endDate) && project.endDate <= endDateFilterIso);
 
-      return matchesSearch && matchesStatus && matchesRisk && matchesEndDate
-    })
-  }, [projects, searchTerm, statusFilter, riskFilter, endDateFilterIso])
+      return matchesSearch && matchesStatus && matchesRisk && matchesEndDate;
+    });
+  }, [projects, searchTerm, statusFilter, riskFilter, endDateFilterIso]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredProjects.length / PAGE_SIZE))
-  const safePage = Math.min(currentPage, totalPages)
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredProjects.length / PAGE_SIZE),
+  );
+  const safePage = Math.min(currentPage, totalPages);
   const visibleProjects = filteredProjects.slice(
     (safePage - 1) * PAGE_SIZE,
-    safePage * PAGE_SIZE
-  )
+    safePage * PAGE_SIZE,
+  );
 
   if (loading) {
-    return <p>Loading projects...</p>
+    return <p>Loading projects...</p>;
   }
 
   if (showAddProject) {
@@ -211,12 +218,12 @@ function Projects() {
       <AddProject
         onBack={() => setShowAddProject(false)}
         onProjectCreated={(newProject) => {
-          setProjects((current) => [newProject, ...current])
-          setCurrentPage(1)
-          setShowAddProject(false)
+          setProjects((current) => [newProject, ...current]);
+          setCurrentPage(1);
+          setShowAddProject(false);
         }}
       />
-    )
+    );
   }
 
   if (selectedProject) {
@@ -225,7 +232,7 @@ function Projects() {
         project={selectedProject}
         onBack={() => setSelectedProject(null)}
       />
-    )
+    );
   }
 
   return (
@@ -257,7 +264,7 @@ function Projects() {
       <div className="project-filters">
         <input
           type="text"
-          placeholder="Search by project or department..."
+          placeholder="Search by project name or department name..."
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
         />
@@ -398,7 +405,9 @@ function Projects() {
               />
             </label>
             <button type="submit">Save Changes</button>
-            <button type="button" onClick={() => setEditingProject(null)}>Cancel</button>
+            <button type="button" onClick={() => setEditingProject(null)}>
+              Cancel
+            </button>
           </form>
         </div>
       )}
@@ -433,8 +442,12 @@ function Projects() {
                   <button onClick={(event) => handleEditClick(project, event)}>
                     Edit
                   </button>
-                  {role === 'admin' && (
-                    <button onClick={(event) => handleDeleteProject(project.id, event)}>
+                  {role === "admin" && (
+                    <button
+                      onClick={(event) =>
+                        handleDeleteProject(project.id, event)
+                      }
+                    >
                       Delete
                     </button>
                   )}
@@ -445,7 +458,9 @@ function Projects() {
 
           <div className="pagination-bar">
             <span>
-              Showing {((safePage - 1) * PAGE_SIZE) + 1}–{Math.min(safePage * PAGE_SIZE, filteredProjects.length)} of {filteredProjects.length}
+              Showing {(safePage - 1) * PAGE_SIZE + 1}–
+              {Math.min(safePage * PAGE_SIZE, filteredProjects.length)} of{" "}
+              {filteredProjects.length}
             </span>
             <div className="pagination-controls">
               <button
@@ -454,10 +469,14 @@ function Projects() {
               >
                 Previous
               </button>
-              <span>Page {safePage} of {totalPages}</span>
+              <span>
+                Page {safePage} of {totalPages}
+              </span>
               <button
                 disabled={safePage === totalPages}
-                onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                onClick={() =>
+                  setCurrentPage((page) => Math.min(totalPages, page + 1))
+                }
               >
                 Next
               </button>
@@ -466,7 +485,7 @@ function Projects() {
         </>
       )}
     </div>
-  )
+  );
 }
 
-export default Projects
+export default Projects;
