@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 from analytics_utils import department_averages, portfolio_averages, project_summary
 from assistant import SUGGESTED_QUESTIONS, answer_query
 from auth import ALGORITHM, SECRET_KEY, create_access_token, hash_password, verify_password
-from database import SessionLocal
+from database import Base, SessionLocal, engine
 from ml.predictor import predict_project, predict_projects
 from models import Milestone, Project, User
 
@@ -25,6 +25,61 @@ app = FastAPI(
     description="Project monitoring, risk analytics and predictive early-warning API",
     version="1.0.0",
 )
+def initialize_database():
+    # Create tables if they do not already exist.
+    Base.metadata.create_all(bind=engine)
+
+    db = SessionLocal()
+
+    try:
+        # Create default users if they do not already exist.
+        users = [
+            {
+                "username": "admin",
+                "password": "Admin@123",
+                "role": "admin",
+            },
+            {
+                "username": "officer",
+                "password": "Officer@123",
+                "role": "officer",
+            },
+        ]
+
+        for user_data in users:
+            existing_user = (
+                db.query(User)
+                .filter(User.username == user_data["username"])
+                .first()
+            )
+
+            if existing_user is None:
+                db.add(
+                    User(
+                        username=user_data["username"],
+                        password_hash=hash_password(user_data["password"]),
+                        role=user_data["role"],
+                    )
+                )
+
+        db.commit()
+
+        # Import the 1,911 PAIMANA projects only when the database is empty.
+        project_count = db.query(Project).count()
+
+    finally:
+        db.close()
+
+    if project_count == 0:
+        from import_paimana_projects import import_projects
+
+        count = import_projects(replace=False)
+        print(f"Imported {count} PAIMANA projects successfully.")
+    else:
+        print(f"Database already contains {project_count} projects.")
+
+
+initialize_database()
 
 # Keep the computed portfolio prediction in server memory until project data is
 # changed or FastAPI restarts. This avoids rerunning ML on every navigation/reload.
