@@ -1,0 +1,54 @@
+# One-command local demo setup:
+#   docker compose up --build
+# Then, once, in a second terminal:
+#   docker compose exec backend python create_tables.py
+#   docker compose exec backend python seed_users.py
+#   docker compose exec backend python seed_data.py   (optional sample projects)
+#
+# Frontend: http://localhost:5173
+# Backend docs: http://localhost:8000/docs
+#
+# This is for local demo purposes only (fixed demo passwords, no TLS).
+# Do not deploy this compose file as-is to a public server.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: projectwatch
+      POSTGRES_PASSWORD: projectwatch
+      POSTGRES_DB: projectwatch
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U projectwatch"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://projectwatch:projectwatch@db:5432/projectwatch
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8000
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  db_data:

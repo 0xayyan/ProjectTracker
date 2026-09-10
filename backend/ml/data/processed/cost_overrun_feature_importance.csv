@@ -1,0 +1,13 @@
+feature,importance
+cumulative_expenditure_cr,0.13804187031629125
+project_age_months,0.11550775523258038
+expenditure_ratio_pct,0.1062087533005096
+project_age_ratio,0.09962339780735233
+months_to_original_target,0.0889614888128714
+original_cost_cr,0.07764039628491097
+original_cost_log_cr,0.07732034146917344
+physical_progress_pct,0.07718259212503654
+progress_remaining_pct,0.07518605649948151
+expenditure_progress_gap_pct,0.07324669757614458
+planned_duration_months,0.061764815076656765
+is_mega_project,0.009315835498991162

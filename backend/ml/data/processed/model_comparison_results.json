@@ -1,0 +1,48 @@
+{
+    "cost_overrun": {
+        "target": "cost_overrun",
+        "baseline_model": "Logistic Regression",
+        "ml_model": "Random Forest",
+        "baseline_accuracy": 0.7354,
+        "ml_accuracy": 0.8069,
+        "accuracy_change": 0.0715,
+        "baseline_precision": 0.5098,
+        "ml_precision": 0.6531,
+        "precision_change": 0.1433,
+        "baseline_recall": 0.7573,
+        "ml_recall": 0.6214,
+        "recall_change": -0.1359,
+        "baseline_f1": 0.6094,
+        "ml_f1": 0.6368,
+        "f1_change": 0.0274,
+        "baseline_roc_auc": 0.8117,
+        "ml_roc_auc": 0.8452,
+        "roc_auc_change": 0.0335
+    },
+    "time_overrun": {
+        "target": "time_overrun",
+        "baseline_model": "Logistic Regression",
+        "ml_model": "Random Forest",
+        "baseline_accuracy": 0.7404,
+        "ml_accuracy": 0.8269,
+        "accuracy_change": 0.0865,
+        "baseline_precision": 0.5333,
+        "ml_precision": 0.7143,
+        "precision_change": 0.181,
+        "baseline_recall": 0.8,
+        "ml_recall": 0.6667,
+        "recall_change": -0.1333,
+        "baseline_f1": 0.64,
+        "ml_f1": 0.6897,
+        "f1_change": 0.0497,
+        "baseline_roc_auc": 0.8405,
+        "ml_roc_auc": 0.8266,
+        "roc_auc_change": -0.0139
+    },
+    "summary": {
+        "cost_roc_auc_improved": true,
+        "time_roc_auc_improved": false,
+        "cost_f1_improved": true,
+        "time_f1_improved": true
+    }
+}
