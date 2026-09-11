@@ -246,10 +246,14 @@ function ProjectDetails({ project, onBack }) {
         {prediction && (
           <>
             <div className="prediction-grid">
-              <div className={`prediction-item prediction-${prediction.cost_prediction.toLowerCase()}`}>
+              <div className={`prediction-item prediction-${prediction.cost_prediction.toLowerCase().replaceAll(' ', '-')}`}>
                 <span>Cost Overrun Probability</span>
-                <strong>{prediction.cost_overrun_probability}%</strong>
-                <small>{prediction.cost_prediction} Risk</small>
+                <strong>
+                  {prediction.cost_overrun_probability === null
+                    ? 'N/A'
+                    : `${prediction.cost_overrun_probability}%`}
+                </strong>
+                <small>{prediction.cost_prediction}{prediction.cost_overrun_probability === null ? '' : ' Risk'}</small>
               </div>
 
               <div className={`prediction-item prediction-${prediction.schedule_prediction.toLowerCase().replaceAll(' ', '-')}`}>

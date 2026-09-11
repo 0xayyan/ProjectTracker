@@ -116,10 +116,11 @@ def prediction_level(probability):
     return "Low"
 
 
-def recommendation(cost_probability, time_probability, schedule_state):
+def recommendation(cost_probability, time_probability, schedule_state, over_budget=False):
     actions = []
-
-    if cost_probability >= 0.70:
+    if over_budget:
+        actions.append("Cost has already exceeded the approved budget; review the overrun magnitude and approve a revised cost estimate.")
+    elif cost_probability >= 0.70:
         actions.append("Review cost variance and expenditure-to-progress mismatch.")
     elif cost_probability >= 0.40:
         actions.append("Monitor expenditure growth against physical progress.")
@@ -168,6 +169,10 @@ def predict_projects(projects):
         end_date = parse_date(project.end_date)
         progress = float(project.progress or 0)
 
+        original_cost = float(project.budget or 0)
+        expenditure = float(project.budget_used or 0)
+        over_budget = original_cost > 0 and expenditure >= original_cost
+
         schedule_state = "Predictive"
         time_probability = None
         schedule_prediction = "Unknown"
@@ -186,16 +191,17 @@ def predict_projects(projects):
             cost_probability,
             time_probability,
             schedule_state,
+            over_budget,
         )
 
-        high_cost = cost_probability >= 0.70
+        high_cost = (not over_budget) and cost_probability >= 0.70
         high_schedule = time_probability is not None and time_probability >= 0.70
-        early_warning = high_cost or high_schedule or schedule_state == "Already overdue"
+        early_warning = over_budget or high_cost or high_schedule or schedule_state == "Already overdue"
 
         results.append({
-            "cost_overrun_probability": round(cost_probability * 100, 2),
+            "cost_overrun_probability": None if over_budget else round(cost_probability * 100, 2),
             "time_overrun_probability": round(time_probability * 100, 2) if time_probability is not None else None,
-            "cost_prediction": prediction_level(cost_probability),
+            "cost_prediction": "Already Over Budget" if over_budget else prediction_level(cost_probability),
             "schedule_prediction": schedule_prediction,
             "schedule_state": schedule_state,
             "early_warning": early_warning,
@@ -211,6 +217,10 @@ def predict_project(project):
     row = pd.DataFrame([features], columns=FEATURES)
 
     cost_probability = float(cost_model.predict_proba(row)[0][1])
+
+    original_cost = float(project.budget or 0)
+    expenditure = float(project.budget_used or 0)
+    over_budget = original_cost > 0 and expenditure >= original_cost
 
     end_date = parse_date(project.end_date)
     progress = float(project.progress or 0)
@@ -233,16 +243,17 @@ def predict_project(project):
         cost_probability,
         time_probability,
         schedule_state,
+        over_budget,
     )
 
-    high_cost = cost_probability >= 0.70
+    high_cost = (not over_budget) and cost_probability >= 0.70
     high_schedule = time_probability is not None and time_probability >= 0.70
-    early_warning = high_cost or high_schedule or schedule_state == "Already overdue"
+    early_warning = over_budget or high_cost or high_schedule or schedule_state == "Already overdue"
 
     return {
-        "cost_overrun_probability": round(cost_probability * 100, 2),
+        "cost_overrun_probability": None if over_budget else round(cost_probability * 100, 2),
         "time_overrun_probability": round(time_probability * 100, 2) if time_probability is not None else None,
-        "cost_prediction": prediction_level(cost_probability),
+        "cost_prediction": "Already Over Budget" if over_budget else prediction_level(cost_probability),
         "schedule_prediction": schedule_prediction,
         "schedule_state": schedule_state,
         "early_warning": early_warning,
