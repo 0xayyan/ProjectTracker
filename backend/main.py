@@ -10,8 +10,10 @@ import jwt
 from fastapi import Depends, FastAPI, Form, HTTPException, status
 from starlette.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import selectinload
 
 from analytics_utils import department_averages, portfolio_averages, project_summary
 from assistant import SUGGESTED_QUESTIONS, answer_query
@@ -26,13 +28,11 @@ app = FastAPI(
     version="1.0.0",
 )
 def initialize_database():
-    # Create tables if they do not already exist.
     Base.metadata.create_all(bind=engine)
 
     db = SessionLocal()
 
     try:
-        # Create default users if they do not already exist.
         users = [
             {
                 "username": "admin",
@@ -64,7 +64,6 @@ def initialize_database():
 
         db.commit()
 
-        # Import the 1,911 PAIMANA projects only when the database is empty.
         project_count = db.query(Project).count()
 
     finally:
@@ -81,8 +80,6 @@ def initialize_database():
 
 initialize_database()
 
-# Keep the computed portfolio prediction in server memory until project data is
-# changed or FastAPI restarts. This avoids rerunning ML on every navigation/reload.
 _prediction_cache = None
 _prediction_cache_lock = asyncio.Lock()
 
@@ -106,9 +103,6 @@ def generate_project_predictions():
     finally:
         db.close()
 
-# Local dev origins always work. For a deployed frontend, set ALLOWED_ORIGINS in the
-# backend's .env to a comma-separated list, e.g.:
-#   ALLOWED_ORIGINS=https://your-app.vercel.app,https://your-custom-domain.com
 _default_origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
@@ -130,6 +124,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -294,6 +290,38 @@ def home():
     return {"message": "ProjectWatch API is running"}
 
 
+@app.get("/public/projects")
+def get_public_projects():
+    db = SessionLocal()
+    try:
+        projects = (
+            db.query(Project)
+            .options(selectinload(Project.milestones))
+            .order_by(Project.id.asc())
+            .all()
+        )
+        return [project_to_dict(project) for project in projects]
+    finally:
+        db.close()
+
+
+@app.get("/public/projects/{project_id}")
+def get_public_project(project_id: int):
+    db = SessionLocal()
+    try:
+        project = (
+            db.query(Project)
+            .options(selectinload(Project.milestones))
+            .filter(Project.id == project_id)
+            .first()
+        )
+        if project is None:
+            raise HTTPException(status_code=404, detail="Project not found.")
+        return project_to_dict(project)
+    finally:
+        db.close()
+
+
 @app.post("/login")
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -341,13 +369,10 @@ async def get_project_predictions(current_user: dict = Depends(require_project_a
     if _prediction_cache is not None:
         return _prediction_cache
 
-    # If several pages/viewers request predictions at the same time, only the
-    # first request performs the calculation; the others wait for its result.
     async with _prediction_cache_lock:
         if _prediction_cache is not None:
             return _prediction_cache
         try:
-            # Run the synchronous DB/model work off the FastAPI worker thread.
             result = await run_in_threadpool(generate_project_predictions)
             _prediction_cache = result
             return result

@@ -1,8 +1,5 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000"
 
-// Keep successful GET responses for the lifetime of this SPA page session.
-// This prevents repeated navigation from re-fetching/re-processing the 1,911-project dataset.
-// The cache is cleared on login/logout and after POST/PUT/PATCH/DELETE mutations.
 const getCache = new Map()
 const inFlightGetRequests = new Map()
 
@@ -27,8 +24,6 @@ function isGetRequest(options) {
 }
 
 function getCacheKey(endpoint) {
-  // The app has one authenticated API session at a time, so the endpoint is
-  // sufficient here. The cache is also cleared on logout and mutations.
   return endpoint
 }
 
@@ -61,9 +56,6 @@ function clearApiCache(endpoint = null) {
 }
 
 function invalidateProjectData() {
-  // A project or milestone mutation can affect lists, details, risk and AI
-  // predictions, so invalidate all GET responses. In-flight requests are not
-  // cancelled; their result can still be used by the current page.
   clearApiCache()
 }
 
@@ -135,7 +127,6 @@ async function apiRequest(endpoint, options = {}) {
     if (useGetCache) {
       writeCachedGet(endpoint, data)
     } else {
-      // POST/PUT/PATCH/DELETE may change project-related data.
       invalidateProjectData()
     }
 
