@@ -90,7 +90,12 @@ def clear_prediction_cache():
 def generate_project_predictions():
     db = SessionLocal()
     try:
-        projects = db.query(Project).order_by(Project.id.asc()).all()
+        projects = (
+            db.query(Project)
+            .options(selectinload(Project.milestones))
+            .order_by(Project.id.asc())
+            .all()
+        )
         predictions = predict_projects(projects)
         return [
             {
@@ -356,7 +361,12 @@ def login(
 def get_projects(current_user: dict = Depends(require_project_access)):
     db = SessionLocal()
     try:
-        projects = db.query(Project).order_by(Project.id.asc()).all()
+        projects = (
+            db.query(Project)
+            .options(selectinload(Project.milestones))
+            .order_by(Project.id.asc())
+            .all()
+        )
         return [project_to_dict(project) for project in projects]
     finally:
         db.close()
@@ -466,7 +476,12 @@ def get_model_performance(current_user: dict = Depends(require_project_access)):
 def get_project(project_id: int, current_user: dict = Depends(require_project_access)):
     db = SessionLocal()
     try:
-        project = db.query(Project).filter(Project.id == project_id).first()
+        project = (
+            db.query(Project)
+            .options(selectinload(Project.milestones))
+            .filter(Project.id == project_id)
+            .first()
+        )
         if project is None:
             raise HTTPException(status_code=404, detail="Project not found")
         return project_to_dict(project)
